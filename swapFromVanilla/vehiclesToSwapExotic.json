@@ -1,0 +1,16 @@
+[
+  { "name": "Vehicle.v_sport1_herrera_outlaw" },
+  { "name": "Vehicle.v_sport1_herrera_riptide" },
+  { "name": "Vehicle.v_sport1_herrera_riptide_premium" },
+  { "name": "Vehicle.v_sport1_quadra_sport_r7" },
+  { "name": "Vehicle.v_sport1_quadra_sport_r7_gt" },
+  { "name": "Vehicle.v_sport1_quadra_sport_r7_poor" },
+  { "name": "Vehicle.v_sport1_quadra_sport_r7_premium" },
+  { "name": "Vehicle.v_sport1_quadra_turbo" },
+  { "name": "Vehicle.v_sport1_quadra_turbo_poor" },
+  { "name": "Vehicle.v_sport1_quadra_turbo_r" },
+  { "name": "Vehicle.v_sport1_quadra_turbo_tyger_claw" },
+  { "name": "Vehicle.v_sport2_villefort_deleon" },
+  { "name": "Vehicle.v_sport2_villefort_deleon_poor" },
+  { "name": "Vehicle.v_sport2_villefort_deleon_sport" }
+]
