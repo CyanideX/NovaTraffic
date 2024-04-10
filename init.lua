@@ -2,14 +2,12 @@ math.randomseed(os.time())
 
 local params = require('params')
 local Cron = require('Cron')
-local NovaCity = {}
+local NovaTraffic = {}
 local categories = { "common", "rare", "exotic", "badlands", "special" }                                            
 local currentVehicleToSwap = { common = 1, rare = 1, exotic = 1, badlands = 1, special = 1 }
 local currentVehicleToSwapTo = { common = 1, rare = 1, exotic = 1, badlands = 1, special = 1 }
 local initialDelay = { common = 10.0, rare = 20.0, exotic = 30.0, badlands = 15.0, special = 15.0 }
 local isInitialReplacementDone = { common = false, rare = false, exotic = false, badlands = false, special = false }
-local swapDelay = { common = 60.0, rare = 90.0, exotic = 120.0, badlands = 60.0, special = 60.0 }
-local moddedVehicles = {}
 local vehiclesToSwap = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {} }                         
 local vehiclesToSwapTo = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {} }
 
@@ -46,6 +44,12 @@ local function loadVehicleFile(filePath, category, vehicleTable)
         else
             local vehicles = parseJsonArray(content)
 
+            -- Check if the vehicles array is empty or not
+            if #vehicles == 0 then
+                print("Warning: No valid entries in " .. filePath .. ". Skipping this file.")
+                return
+            end
+
             for _, vehicle in ipairs(vehicles) do
                 if TweakDB:GetFlat(vehicle .. ".entityTemplatePath") then
                     vehicleTable[category][#vehicleTable[category] + 1] = vehicle
@@ -57,7 +61,7 @@ local function loadVehicleFile(filePath, category, vehicleTable)
         print("Error: File not found - " .. filePath .. ". Creating an empty one.")
         file = io.open(filePath, 'w')
         local sampleLayout =
-        '[\n  { "name": "Vehicle.v_name_of_first_vehicle" },\n  { "name": "Vehicle.v_name_of_second_vehicle" }\n]'
+        '[\n  \n]'
         file:write(sampleLayout)
         file:close()
     end
@@ -67,21 +71,22 @@ registerForEvent("onInit", function()
     for _, category in ipairs(categories) do
         -- Load modded vehicles
         loadVehicleFile(
-        'swapToModded/moddedVehicles' .. string.upper(string.sub(category, 1, 1)) .. string.sub(category, 2) .. '.json',
-            category, vehiclesToSwapTo)
+            'swapToModded/moddedVehicles' ..
+            string.upper(string.sub(category, 1, 1)) .. string.sub(category, 2) .. '.json', category, vehiclesToSwapTo)
 
-        -- Load custom vehicles
-        loadVehicleFile('custom/' .. category .. '/customVehicles.json', category, vehiclesToSwap)
+        -- Load user vehicles
+        loadVehicleFile('userVehicles/userVehicles' ..
+            string.upper(string.sub(category, 1, 1)) .. string.sub(category, 2) .. '.json', category, vehiclesToSwap)
 
         -- Load vanilla vehicles
         loadVehicleFile(
-        'swapToVanilla/vanillaVehicles' .. string.upper(string.sub(category, 1, 1)) .. string.sub(category, 2) .. '.json',
-            category, vehiclesToSwapTo)
+            'swapToVanilla/vanillaVehicles' ..
+            string.upper(string.sub(category, 1, 1)) .. string.sub(category, 2) .. '.json', category, vehiclesToSwapTo)
 
         -- Load vehicles to swap
         loadVehicleFile(
-        'swapFromVanilla/vehiclesToSwap' ..
-        string.upper(string.sub(category, 1, 1)) .. string.sub(category, 2) .. '.json', category, vehiclesToSwap)
+            'swapFromVanilla/vehiclesToSwap' ..
+            string.upper(string.sub(category, 1, 1)) .. string.sub(category, 2) .. '.json', category, vehiclesToSwap)
     end
 end)
 
@@ -151,4 +156,4 @@ registerForEvent("onUpdate", function(delta)
     end
 end)
 
-return NovaCity
+return NovaTraffic
