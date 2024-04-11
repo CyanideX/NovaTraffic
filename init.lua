@@ -66,6 +66,33 @@ local function loadVehicleFile(filePath, category, vehicleTable)
         file:close()
     end
 end
+    
+function checkFolder(folder)
+    local files = dir(folder)
+    for _, file in ipairs(files) do
+        local extension = file.name:match("^.+(%..+)$")
+        if extension == ".json" then
+            local file2 = io.open(folder .. '/' .. file.name, 'r')
+            if file2 then
+                local content = file2:read('*all')
+                if not is_valid_json(content) then
+                    print('Failed to load mod vehicles.')
+                end
+                file2:close()
+                local customVehicles = parseJsonArray(content)                
+                for _, vehicle in ipairs(customVehicles) do
+                    if TweakDB:GetFlat(vehicle .. '.entityTemplatePath') ~= nil then
+                        vehicleTable[category][#vehicleTable[category] + 1] = vehicle
+                    end
+                end
+            else
+                return
+            end
+        else
+            print('Skipping NPC file without json extension in' .. folder)
+        end
+    end
+end
 
 registerForEvent("onInit", function()
     for _, category in ipairs(categories) do
@@ -87,6 +114,9 @@ registerForEvent("onInit", function()
         loadVehicleFile(
             'swapFromVanilla/vehiclesToSwap' ..
             string.upper(string.sub(category, 1, 1)) .. string.sub(category, 2) .. '.json', category, vehiclesToSwap)
+
+        checkFolder("custom")
+        checkFolder("community")
     end
 end)
 
