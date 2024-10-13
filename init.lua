@@ -157,6 +157,11 @@ registerForEvent("onInit", function()
     end
 end)
 
+local function formatVehicleName(vehicle)
+    local name = vehicle:gsub("Vehicle%.v_[^_]+_", ""):gsub("_", " ")
+    return name:gsub("(%a)([%w_']*)", function(first, rest) return first:upper() .. rest:lower() end)
+end
+
 local function replace(initialVehicle, newVehicle)
     if TweakDB:GetFlat(initialVehicle .. ".isReplaced") then
         return
@@ -188,7 +193,7 @@ local function vehicleReplacement(category)
     end
 
     replace(vehicleToSwap, vehicle)
-    debugPrint("Swapped " .. vehicleToSwap .. " (" .. category .. ") with " .. vehicle .. " (" .. category .. ")")
+    debugPrint("Swapped " .. formatVehicleName(vehicleToSwap) .. " (" .. category:upper() .. ") with " .. formatVehicleName(vehicle) .. " (" .. category:upper() .. ")")
 
     currentVehicleToSwap[category] = (currentVehicleToSwap[category] % #vehiclesToSwap[category]) + 1
     currentVehicleToSwapTo[category] = (currentVehicleToSwapTo[category] % #vehiclesToSwapTo[category]) + 1
