@@ -58,6 +58,7 @@ end
 registerHotkey("NTDebugToggle", "Toggle Console Debug", function()
     settings.Current.debugOutput = not settings.Current.debugOutput
     print(IconGlyphs.CarHatchback .. " Nova Traffic: Debug output " .. (settings.Current.debugOutput and "enabled" or "disabled"))
+    SaveSettings()
 end)
 
 local function loadVehicleFile(filePath, category, vehicleTable)
@@ -128,6 +129,8 @@ function checkFolder(folder)
 end
 
 registerForEvent("onInit", function()
+    LoadSettings()    
+    
     for _, category in ipairs(categories) do
         if category == "exotic" then
             checkFolder("custom")
@@ -209,5 +212,78 @@ registerForEvent("onUpdate", function(delta)
         end
     end
 end)
+
+function SaveSettings()
+    local saveData = {
+        debugOutput = settings.Current.debugOutput,
+    }
+
+    local function formatTable(t, indent)
+        local formatted = "{\n"
+        local indentStr = string.rep("    ", indent)
+        local count = 0
+        local total = 0
+        for _ in pairs(t) do total = total + 1 end
+        for k, v in pairs(t) do
+            count = count + 1
+            formatted = formatted .. indentStr .. string.format('"%s": ', k)
+            if type(v) == "table" then
+                formatted = formatted .. formatTable(v, indent + 1)
+            elseif type(v) == "string" then
+                formatted = formatted .. string.format('"%s"', v)
+            else
+                formatted = formatted .. tostring(v)
+            end
+            if count < total then
+                formatted = formatted .. ",\n"
+            else
+                formatted = formatted .. "\n"
+            end
+        end
+        return formatted .. string.rep("    ", indent - 1) .. "}"
+    end
+
+    local file = io.open("settings.json", "w")
+    if file then
+        local formattedJsonString = formatTable(saveData, 1)
+        file:write(formattedJsonString)
+        file:close()
+        --debugPrint("Settings saved successfully")
+        print(IconGlyphs.CarHatchback .. " Nova Traffic: Settings saved successfully")
+    else
+        print(IconGlyphs.CarHatchback .. " Nova Traffic: ERROR - Unable to open file for writing")
+    end
+end
+
+function LoadSettings()
+    local file = io.open("settings.json", "r")
+    local saveNeeded = false
+
+    if file then
+        local content = file:read("*all")
+        file:close()
+        local loadedSettings = json.decode(content)
+        
+        -- Check for missing parameters and set defaults if necessary
+        if loadedSettings.debugOutput == nil then
+            loadedSettings.debugOutput = settings.Default.debugOutput
+            saveNeeded = true
+        end
+
+        settings.Current.debugOutput = loadedSettings.debugOutput
+
+        if saveNeeded then
+            -- Erase and rewrite settings.json with updated values
+            SaveSettings()
+            print(IconGlyphs.CarHatchback .. " Nova Traffic: Settings loaded and updated successfully")
+        else
+            print(IconGlyphs.CarHatchback .. " Nova Traffic: Settings loaded successfully")
+        end
+    else
+        print(IconGlyphs.CarHatchback .. " Nova Traffic: Settings file not found")
+        print(IconGlyphs.CarHatchback .. " Nova Traffic: Creating default settings file")
+        SaveSettings()
+    end
+end
 
 return NovaTraffic
