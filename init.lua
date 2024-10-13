@@ -218,37 +218,10 @@ function SaveSettings()
         debugOutput = settings.Current.debugOutput,
     }
 
-    local function formatTable(t, indent)
-        local formatted = "{\n"
-        local indentStr = string.rep("    ", indent)
-        local count = 0
-        local total = 0
-        for _ in pairs(t) do total = total + 1 end
-        for k, v in pairs(t) do
-            count = count + 1
-            formatted = formatted .. indentStr .. string.format('"%s": ', k)
-            if type(v) == "table" then
-                formatted = formatted .. formatTable(v, indent + 1)
-            elseif type(v) == "string" then
-                formatted = formatted .. string.format('"%s"', v)
-            else
-                formatted = formatted .. tostring(v)
-            end
-            if count < total then
-                formatted = formatted .. ",\n"
-            else
-                formatted = formatted .. "\n"
-            end
-        end
-        return formatted .. string.rep("    ", indent - 1) .. "}"
-    end
-
     local file = io.open("settings.json", "w")
     if file then
-        local formattedJsonString = formatTable(saveData, 1)
-        file:write(formattedJsonString)
+        file:write(json.encode(saveData))
         file:close()
-        --debugPrint("Settings saved successfully")
         print(IconGlyphs.CarHatchback .. " Nova Traffic: Settings saved successfully")
     else
         print(IconGlyphs.CarHatchback .. " Nova Traffic: ERROR - Unable to open file for writing")
@@ -273,7 +246,6 @@ function LoadSettings()
         settings.Current.debugOutput = loadedSettings.debugOutput
 
         if saveNeeded then
-            -- Erase and rewrite settings.json with updated values
             SaveSettings()
             print(IconGlyphs.CarHatchback .. " Nova Traffic: Settings loaded and updated successfully")
         else
@@ -285,5 +257,6 @@ function LoadSettings()
         SaveSettings()
     end
 end
+
 
 return NovaTraffic
