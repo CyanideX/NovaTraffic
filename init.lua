@@ -3,15 +3,15 @@ math.randomseed(os.time())
 local params = require('params')
 local Cron = require('Cron')
 local NovaTraffic = {}
-local categories = { "common", "rare", "exotic", "badlands", "special" }                                            
+local categories = { "common", "rare", "exotic", "badlands", "special" }
 local currentVehicleToSwap = { common = 1, rare = 1, exotic = 1, badlands = 1, special = 1 }
 local currentVehicleToSwapTo = { common = 1, rare = 1, exotic = 1, badlands = 1, special = 1 }
-local initialDelay = { common = 10.0, rare = 20.0, exotic = 30.0, badlands = 15.0, special = 15.0 }
+local initialDelay = { common = 1.0, rare = 2.0, exotic = 3.0, badlands = 4.0, special = 5.0 }
 local isInitialReplacementDone = { common = false, rare = false, exotic = false, badlands = false, special = false }
-local vehiclesToSwap = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {} }                         
+local vehiclesToSwap = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {} }
 local vehiclesToSwapTo = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {} }
 
-local swapDelayRange = { common = { min = 5.0, max = 60.0 }, rare = { min = 10.0, max = 120.0 }, exotic = { min = 20.0, max = 180.0 }, badlands = { min = 15.0, max = 60.0 }, special = { min = 15.0, max = 60.0 } }
+local swapDelayRange = { common = { min = 500.0, max = 600.0 }, rare = { min = 100.0, max = 120.0 }, exotic = { min = 2.0, max = 3.0 }, badlands = { min = 150.0, max = 600.0 }, special = { min = 105.0, max = 600.0 } }
 
 local function scaleSwapDelay(category)
     local range = swapDelayRange[category]
@@ -33,6 +33,33 @@ local function shuffleArray(array)
     end
 end
 
+function is_valid_json(str)
+    local success, result = pcall(json.decode, str)
+    return success and type(result) == 'table'
+end
+
+local settings =
+{
+	Current = {
+		debugOutput = true,
+	},
+	Default = {
+		debugOutput = true,
+	}
+}
+
+function debugPrint(message)
+    if settings.Current.debugOutput then
+        print(IconGlyphs.CarHatchback .. " Nova Traffic: " .. message)
+    end
+end
+
+-- Register a CET hotkey to toggle debug output
+registerHotkey("NTDebugToggle", "Toggle Console Debug", function()
+    settings.Current.debugOutput = not settings.Current.debugOutput
+    print(IconGlyphs.CarHatchback .. " Nova Traffic: Debug output " .. (settings.Current.debugOutput and "enabled" or "disabled"))
+end)
+
 local function loadVehicleFile(filePath, category, vehicleTable)
     local file = io.open(filePath, 'r')
     if file then
@@ -40,13 +67,13 @@ local function loadVehicleFile(filePath, category, vehicleTable)
         file:close()
 
         if content == "" then
-            print("Warning: File " .. filePath .. " is empty. Swapping may not work correctly.")
+            debugPrint("Warning: File " .. filePath .. " is empty. Swapping may not work correctly.")
         else
             local vehicles = parseJsonArray(content)
 
             -- Check if the vehicles array is empty or not
             if #vehicles == 0 then
-                print("Warning: No valid entries in " .. filePath .. ". Skipping this file.")
+                debugPrint("Warning: No valid entries in " .. filePath .. ". Skipping this file.")
                 return
             end
 
@@ -58,7 +85,7 @@ local function loadVehicleFile(filePath, category, vehicleTable)
             shuffleArray(vehicleTable[category])
         end
     else
-        print("Error: File not found - " .. filePath .. ". Creating an empty one.")
+        debugPrint("Error: File not found - " .. filePath .. ". Creating an empty one.")
         file = io.open(filePath, 'w')
         local sampleLayout =
         '[\n  \n]'
@@ -66,9 +93,10 @@ local function loadVehicleFile(filePath, category, vehicleTable)
         file:close()
     end
 end
-    
+
 function checkFolder(folder)
     local files = dir(folder)
+    local customVehiclesLoaded = false
     for _, file in ipairs(files) do
         local extension = file.name:match("^.+(%..+)$")
         if extension == ".json" then
@@ -76,26 +104,35 @@ function checkFolder(folder)
             if file2 then
                 local content = file2:read('*all')
                 if not is_valid_json(content) then
-                    print('Failed to load mod vehicles.')
+                    debugPrint('Failed to load mod vehicles.')
                 end
                 file2:close()
-                local customVehicles = parseJsonArray(content)                
+                local customVehicles = parseJsonArray(content)
                 for _, vehicle in ipairs(customVehicles) do
-                    if TweakDB:GetFlat(vehicle .. '.entityTemplatePath') ~= nil then
-                        vehicleTable[category][#vehicleTable[category] + 1] = vehicle
+                    if TweakDB:GetFlat(vehicle.name .. '.entityTemplatePath') ~= nil then
+                        vehicleTable["exotic"][#vehicleTable["exotic"] + 1] = vehicle.name
+                        debugPrint("Loaded custom vehicle: " .. vehicle.name)
+                        customVehiclesLoaded = true
                     end
                 end
             else
                 return
             end
         else
-            print('Skipping NPC file without json extension in' .. folder)
+            debugPrint('Skipping file without json extension in' .. folder)
         end
+    end
+    if not customVehiclesLoaded then
+        debugPrint("No custom folder vehicles loaded!")
     end
 end
 
 registerForEvent("onInit", function()
     for _, category in ipairs(categories) do
+        if category == "exotic" then
+            checkFolder("custom")
+        end
+
         -- Load modded vehicles
         loadVehicleFile(
             'swapToModded/moddedVehicles' ..
@@ -114,9 +151,6 @@ registerForEvent("onInit", function()
         loadVehicleFile(
             'swapFromVanilla/vehiclesToSwap' ..
             string.upper(string.sub(category, 1, 1)) .. string.sub(category, 2) .. '.json', category, vehiclesToSwap)
-
-        checkFolder("custom")
-        checkFolder("community")
     end
 end)
 
@@ -151,16 +185,7 @@ local function vehicleReplacement(category)
     end
 
     replace(vehicleToSwap, vehicle)
-    print("Swapped " .. vehicleToSwap .. " (" .. category .. ") with " .. vehicle .. " (" .. category .. ")")
-
-    -- Add the swapped vehicle back into the pool of vehicles to swap
-    vehiclesToSwap[category][#vehiclesToSwap[category] + 1] = vehicle
-
-    -- Add the swapped modded vehicle back into the pool of vehicles to swap to
-    -- Add it multiple times to increase its probability of being selected
-    for i = 1, 5 do
-        vehiclesToSwapTo[category][#vehiclesToSwapTo[category] + 1] = vehicleToSwap
-    end
+    debugPrint("Swapped " .. vehicleToSwap .. " (" .. category .. ") with " .. vehicle .. " (" .. category .. ")")
 
     currentVehicleToSwap[category] = (currentVehicleToSwap[category] % #vehiclesToSwap[category]) + 1
     currentVehicleToSwapTo[category] = (currentVehicleToSwapTo[category] % #vehiclesToSwapTo[category]) + 1
@@ -174,7 +199,6 @@ local function vehicleReplacement(category)
     local delay = scaleSwapDelay(category)
     Cron.After(delay, function() vehicleReplacement(category) end)
 end
-
 
 registerForEvent("onUpdate", function(delta)
     Cron.Update(delta)
