@@ -3,6 +3,7 @@ math.randomseed(os.time())
 local params = require('params')
 local Cron = require('Cron')
 local NovaTraffic = {}
+local modVersion = "1.0.0"
 local categories = { "common", "rare", "exotic", "badlands", "special" }
 local currentVehicleToSwap = { common = 1, rare = 1, exotic = 1, badlands = 1, special = 1 }
 local currentVehicleToSwapTo = { common = 1, rare = 1, exotic = 1, badlands = 1, special = 1 }
@@ -129,7 +130,7 @@ function checkFolder(folder)
 end
 
 registerForEvent("onInit", function()
-    LoadSettings()    
+    LoadSettings()
     
     for _, category in ipairs(categories) do
         if category == "exotic" then
@@ -216,6 +217,40 @@ registerForEvent("onUpdate", function(delta)
             isInitialReplacementDone[category] = true
         end
     end
+end)
+
+local function DrawGUI()
+    -- Check if the CET window is open
+	if not cetOpen then
+		return
+	end
+
+    if ImGui.Begin("Nova Traffic - v" .. modVersion, true, ImGuiWindowFlags.NoScrollbar) then
+        ImGui.Dummy(0, 10)
+        ImGui.Text("Debug:")
+        ImGui.Separator()
+        ImGui.Dummy(0, 10)
+
+        local changed
+        settings.Current.debugOutput, changed = ImGui.Checkbox("Debug Console Output", settings.Current.debugOutput)
+        if changed then
+            print(IconGlyphs.CarHatchback .. " Nova Traffic: Toggled debug output to " .. tostring(settings.Current.debugOutput))
+            SaveSettings()
+        end
+        ImGui.Dummy(0, 10)
+    end
+end
+
+registerForEvent("onDraw", function()
+    DrawGUI()
+end)
+
+registerForEvent("onOverlayOpen", function()
+    cetOpen = true
+end)
+
+registerForEvent("onOverlayClose", function()
+    cetOpen = false
 end)
 
 function SaveSettings()
