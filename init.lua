@@ -12,13 +12,6 @@ local isInitialReplacementDone = { common = false, rare = false, exotic = false,
 local vehiclesToSwap = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {} }
 local vehiclesToSwapTo = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {} }
 
-local swapDelayRange = { common = { min = 500.0, max = 600.0 }, rare = { min = 100.0, max = 120.0 }, exotic = { min = 2.0, max = 3.0 }, badlands = { min = 150.0, max = 600.0 }, special = { min = 105.0, max = 600.0 } }
-
-local function scaleSwapDelay(category)
-    local range = swapDelayRange[category]
-    return ((range.max - range.min) / currentVehicleToSwap[category]) + range.min
-end
-
 local function parseJsonArray(json)
     local array = {}
     for name in string.gmatch(json, '{ "name": "([^"]+)" }') do
@@ -41,12 +34,26 @@ end
 
 local settings =
 {
-	Current = {
-		debugOutput = true,
-	},
-	Default = {
-		debugOutput = true,
-	}
+    Current = {
+        debugOutput = true,
+        swapDelay = {
+            common = 30,
+            rare = 90,
+            exotic = 120,
+            badlands = 120,
+            special = 180
+        }
+    },
+    Default = {
+        debugOutput = true,
+        swapDelay = {
+            common = 30,
+            rare = 90,
+            exotic = 120,
+            badlands = 120,
+            special = 180
+        }
+    }
 }
 
 function debugPrint(message)
@@ -56,11 +63,11 @@ function debugPrint(message)
 end
 
 -- Register a CET hotkey to toggle debug output
-registerHotkey("NTDebugToggle", "Toggle Console Debug", function()
+--[[registerHotkey("NTDebugToggle", "Toggle Console Debug", function()
     settings.Current.debugOutput = not settings.Current.debugOutput
     print(IconGlyphs.CarHatchback .. " Nova Traffic: Debug output " .. (settings.Current.debugOutput and "enabled" or "disabled"))
     SaveSettings()
-end)
+end)]]
 
 local function loadVehicleFile(filePath, category, vehicleTable)
     local file = io.open(filePath, 'r')
@@ -172,10 +179,8 @@ local function replace(initialVehicle, newVehicle)
     end
     TweakDB:Update(initialVehicle)
     TweakDB:SetFlat(initialVehicle .. ".isReplaced", true)
-    TweakDB:SetFlatNoUpdate('Vehicle.v_standard2_archer_hella.entityTemplatePath',
-        'base//vehicles//custom//v_custom_archer_hella_combat_cab.ent')
-    TweakDB:SetFlatNoUpdate('Vehicle.v_standard2_chevalier_thrax.entityTemplatePath',
-        'base//vehicles//custom//v_custom_chevalier_thrax_combat_cab.ent')
+    TweakDB:SetFlatNoUpdate('Vehicle.v_standard2_archer_hella.entityTemplatePath', 'base//vehicles//custom//v_custom_archer_hella_combat_cab.ent')
+    TweakDB:SetFlatNoUpdate('Vehicle.v_standard2_chevalier_thrax.entityTemplatePath', 'base//vehicles//custom//v_custom_chevalier_thrax_combat_cab.ent')
 end
 
 local function vehicleReplacement(category)
@@ -205,7 +210,7 @@ local function vehicleReplacement(category)
         shuffleArray(vehiclesToSwapTo[category])
     end
 
-    local delay = scaleSwapDelay(category)
+    local delay = settings.Current.swapDelay[category] -- Use the user settings for swap delay
     Cron.After(delay, function() vehicleReplacement(category) end)
 end
 
@@ -221,9 +226,9 @@ end)
 
 local function DrawGUI()
     -- Check if the CET window is open
-	if not cetOpen then
-		return
-	end
+    if not cetOpen then
+        return
+    end
 
     if ImGui.Begin("Nova Traffic - v" .. modVersion, true, ImGuiWindowFlags.NoScrollbar) then
         ImGui.Dummy(0, 10)
@@ -237,6 +242,20 @@ local function DrawGUI()
             print(IconGlyphs.CarHatchback .. " Nova Traffic: Toggled debug output to " .. tostring(settings.Current.debugOutput))
             SaveSettings()
         end
+        ImGui.Dummy(0, 10)
+
+        ImGui.Text("Swap delay timers (in seconds):")
+        for _, category in ipairs(categories) do
+            local swapDelay = settings.Current.swapDelay[category]
+            swapDelay, changed = ImGui.SliderInt(string.sub(category, 1, 1):upper() .. string.sub(category, 2) .. "##", swapDelay, 1, 600)
+            if changed then
+                settings.Current.swapDelay[category] = swapDelay
+                SaveSettings()
+                -- Update the swap delay immediately
+                isInitialReplacementDone[category] = false
+            end
+        end
+        
         ImGui.Dummy(0, 10)
     end
 end
@@ -256,6 +275,7 @@ end)
 function SaveSettings()
     local saveData = {
         debugOutput = settings.Current.debugOutput,
+        swapDelay = settings.Current.swapDelay
     }
 
     local file = io.open("settings.json", "w")
@@ -283,7 +303,13 @@ function LoadSettings()
             saveNeeded = true
         end
 
+        if loadedSettings.swapDelay == nil then
+            loadedSettings.swapDelay = settings.Default.swapDelay
+            saveNeeded = true
+        end
+
         settings.Current.debugOutput = loadedSettings.debugOutput
+        settings.Current.swapDelay = loadedSettings.swapDelay
 
         if saveNeeded then
             SaveSettings()
@@ -297,6 +323,4 @@ function LoadSettings()
         SaveSettings()
     end
 end
-
-
 return NovaTraffic
