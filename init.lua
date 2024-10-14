@@ -13,6 +13,16 @@ local vehiclesToSwap = { common = {}, rare = {}, exotic = {}, badlands = {}, spe
 local vehiclesToSwapTo = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {} }
 local customVehiclesToSwapTo = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {} }
 
+local ui = {
+	tooltip = function(text, alwaysShow)
+		if ImGui.IsItemHovered() and text ~= "" then
+			ImGui.BeginTooltip()
+			ImGui.SetTooltip(text)
+			ImGui.EndTooltip()
+		end
+	end
+}
+
 local function shuffleArray(array)
     for i = #array, 2, -1 do
         local j = math.random(i)
@@ -137,6 +147,8 @@ local function loadCustomVehicleFiles(folder, vehicleTableTo)
                                 if TweakDB:GetFlat(vehicle.name .. ".entityTemplatePath") then
                                     vehicleTableTo[category] = vehicleTableTo[category] or {}
                                     table.insert(vehicleTableTo[category], vehicle.name)
+                                else
+                                    debugPrint("Warning: Vehicle " .. vehicle.name .. " does not exist in game. Skipping this entry.")
                                 end
                             end
                             shuffleArray(vehicleTableTo[category])
@@ -269,6 +281,7 @@ local function DrawGUI()
         if changed then
             SaveSettings()
         end
+        ui.tooltip("Adjust the ratio of vanilla vehicles swaps to custom vehicle swaps.\n0.0 will swap only vanilla and 1.0 will swap only custom vehicles.")
         ImGui.Dummy(0, 10)
     end
 end

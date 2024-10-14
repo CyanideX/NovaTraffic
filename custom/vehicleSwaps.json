@@ -3,6 +3,7 @@
         "swapFrom": [
         ],
         "swapTo": [
+            { "name": "Vehicle.ae86_base_purchasable" },
             { "name": "Vehicle.v_2022_hyundai_n_vision_74" }
         ]
     },
@@ -10,28 +11,37 @@
         "swapFrom": [
         ],
         "swapTo": [
-            { "name": "Vehicle.v_2022_hyundai_n_vision_74" }
+            { "name": "Vehicle.v_2022_hyundai_n_vision_74" },
+            { "name": "Vehicle.evo_x" },
+            { "name": "Vehicle.challenger_srt_demon_01" },
+            { "name": "Vehicle.ae86_street_purchasable" }
         ]
     },
     "exotic": {
         "swapFrom": [
         ],
         "swapTo": [
-            { "name": "Vehicle.v_2022_hyundai_n_vision_74" }
+            { "name": "Vehicle.v_2022_hyundai_n_vision_74" },
+            { "name": "Vehicle.nsx_base_purchasable" },
+            { "name": "Vehicle.lamborghini_temerario" },
+            { "name": "Vehicle.2017_nissan_gtr_r35_default" },
+            { "name": "Vehicle.v_2009_chevrolet_corvette_zr1" }
         ]
     },
     "badlands": {
         "swapFrom": [
         ],
         "swapTo": [
-            { "name": "Vehicle.v_2022_hyundai_n_vision_74" }
+            { "name": "Vehicle.h1_nomad_purchasable" }
         ]
     },
     "special": {
         "swapFrom": [
         ],
         "swapTo": [
-            { "name": "Vehicle.v_2022_hyundai_n_vision_74" }
+            { "name": "Vehicle.quadra_phantom_mk6_basic" },
+            { "name": "Vehicle.dmc_btf_base_purchasable" },
+            { "name": "Vehicle.ford_crown_vic_01" }
         ]
     }
 }
