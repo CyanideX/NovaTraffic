@@ -12,14 +12,6 @@ local isInitialReplacementDone = { common = false, rare = false, exotic = false,
 local vehiclesToSwap = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {} }
 local vehiclesToSwapTo = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {} }
 
-local function parseJsonArray(json)
-    local array = {}
-    for name in string.gmatch(json, '{ "name": "([^"]+)" }') do
-        array[#array + 1] = name
-    end
-    return array
-end
-
 local function shuffleArray(array)
     for i = #array, 2, -1 do
         local j = math.random(i)
@@ -125,10 +117,46 @@ local function loadVehicleFile(filePath, vehicleTable, vehicleTableTo)
     end
 end
 
+local function loadCustomVehicleFiles(folder, vehicleTable, vehicleTableTo)
+    local files = dir(folder)
+    for _, file in ipairs(files) do
+        if file.name:match("%.json$") then
+            local filePath = folder .. '/' .. file.name
+            local file = io.open(filePath, 'r')
+            if file then
+                local content = file:read('*all')
+                file:close()
+                if content ~= "" and is_valid_json(content) then
+                    local vehicles, vehiclesTo = parseVehicleSwapJson(content)
+                    if vehiclesTo then
+                        for category, vList in pairs(vehiclesTo) do
+                            for _, vehicle in ipairs(vList) do
+                                if TweakDB:GetFlat(vehicle.name .. ".entityTemplatePath") then
+                                    vehicleTableTo[category] = vehicleTableTo[category] or {}
+                                    table.insert(vehicleTableTo[category], vehicle.name)
+                                end
+                            end
+                            shuffleArray(vehicleTableTo[category])
+                        end
+                    else
+                        debugPrint("Warning: No valid vehicle swap lists in " .. filePath .. ". Skipping this file.")
+                    end
+                else
+                    debugPrint("Failed to load user vehicles from " .. filePath)
+                end
+            else
+                debugPrint("User vehicle file not found - " .. filePath)
+            end
+        end
+    end
+end
+
 registerForEvent("onInit", function()
     LoadSettings()
     loadVehicleFile('vehicleSwaps.json', vehiclesToSwap, vehiclesToSwapTo)
+    loadCustomVehicleFiles('custom', vehiclesToSwap, vehiclesToSwapTo)
 end)
+
 
 local function formatVehicleName(vehicle)
     return vehicle:gsub("Vehicle%.v_[^_]+_", ""):gsub("_", " "):gsub("(%a)([%w_']*)", function(first, rest) return first:upper() .. rest:lower() end)

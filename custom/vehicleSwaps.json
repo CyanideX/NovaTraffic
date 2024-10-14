@@ -1,0 +1,37 @@
+{
+    "common": {
+        "swapFrom": [
+        ],
+        "swapTo": [
+            { "name": "Vehicle.v_2022_hyundai_n_vision_74" }
+        ]
+    },
+    "rare": {
+        "swapFrom": [
+        ],
+        "swapTo": [
+            { "name": "Vehicle.v_2022_hyundai_n_vision_74" }
+        ]
+    },
+    "exotic": {
+        "swapFrom": [
+        ],
+        "swapTo": [
+            { "name": "Vehicle.v_2022_hyundai_n_vision_74" }
+        ]
+    },
+    "badlands": {
+        "swapFrom": [
+        ],
+        "swapTo": [
+            { "name": "Vehicle.v_2022_hyundai_n_vision_74" }
+        ]
+    },
+    "special": {
+        "swapFrom": [
+        ],
+        "swapTo": [
+            { "name": "Vehicle.v_2022_hyundai_n_vision_74" }
+        ]
+    }
+}
