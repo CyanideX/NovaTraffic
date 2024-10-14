@@ -42,10 +42,10 @@ local settings = {
             debugOutput = true,
             swapDelay = {
                 common = { min = 500, max = 600 },
-                rare = { min = 150, max = 300 },
+                rare = { min = 350, max = 600 },
                 exotic = { min = 400, max = 600 },
-                badlands = { min = 150, max = 600 },
-                special = { min = 150, max = 600 }
+                badlands = { min = 350, max = 600 },
+                special = { min = 350, max = 600 }
             },
             swapRatio = 0.5
         },
@@ -53,10 +53,10 @@ local settings = {
             debugOutput = true,
             swapDelay = {
                 common = { min = 500, max = 600 },
-                rare = { min = 150, max = 300 },
+                rare = { min = 350, max = 600 },
                 exotic = { min = 400, max = 600 },
-                badlands = { min = 150, max = 600 },
-                special = { min = 150, max = 600 }
+                badlands = { min = 350, max = 600 },
+                special = { min = 350, max = 600 }
             },
             swapRatio = 0.5
         }
@@ -251,13 +251,13 @@ local function DrawGUI()
         return
     end
     local windowWidth = 430
-    local windowHeight = 100 + (sliderToggle and (#categories * 87) or 0) + 190
+    local windowHeight = 100 + (sliderToggle and (#categories * 112) or 0) + 190
     ImGui.SetNextWindowSize(windowWidth, windowHeight, ImGuiCond.Always)
     if ImGui.Begin("Nova Traffic - v" .. modVersion, true, ImGuiWindowFlags.NoScrollbar) then
         ImGui.Dummy(0, 10)
         ImGui.Text("Debug:")
         ImGui.Separator()
-        ImGui.Dummy(0, 10)
+        ImGui.Dummy(0, 4)
         local changed
         settings.Current.debugOutput, changed = ImGui.Checkbox("Debug Console Output", settings.Current.debugOutput)
         if changed then
@@ -265,17 +265,33 @@ local function DrawGUI()
             SaveSettings()
         end
         ImGui.Dummy(0, 10)
+        ImGui.Text("Adjustments:")
+        ImGui.Separator()
+        ImGui.Dummy(0, 4)
+        settings.Current.swapRatio, changed = ImGui.SliderFloat("Swap Ratio", settings.Current.swapRatio, 0.0, 1.0, "%.2f")
+        if changed then
+            SaveSettings()
+        end
+        ui.tooltip("Adjust the ratio of vanilla vehicles swaps to custom vehicle swaps.\n\n0.0 will swap only vanilla and 1.0 will swap only custom vehicles.")
+        ImGui.Dummy(0, 0)
         sliderToggle, changed = ImGui.Checkbox("Adjust Swap Timers", sliderToggle)
         if changed then
             print(IconGlyphs.CarHatchback .. " Nova Traffic: Toggled debug output to " .. tostring(sliderToggle))
             SaveSettings()
         end
         ui.tooltip("Changing slider values is NOT recommended.\n\nYou may need to reload CET mods for changes to take effect.")
+        ImGui.Dummy(0, 10)
         if sliderToggle then
             ImGui.Text("Swap delay timers (min to max in seconds):")
+            ImGui.Dummy(0, 4)
             for _, category in ipairs(categories) do
                 local minDelay = settings.Current.swapDelay[category].min
                 local maxDelay = settings.Current.swapDelay[category].max
+                ImGui.PushStyleColor(ImGuiCol.SliderGrab, ImGui.GetColorU32(1, 0.2, 0.2, 1.0))
+                ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, ImGui.GetColorU32(1, 0.2, 0.2, 0.5))
+                ImGui.PushStyleColor(ImGuiCol.SliderGrabActive, ImGui.GetColorU32(1, 0.2, 0.2, 1.0))
+                ImGui.PushStyleColor(ImGuiCol.FrameBg, ImGui.GetColorU32(1, 0.0, 0.0, 0.2))
+                ImGui.PushStyleColor(ImGuiCol.FrameBgActive, ImGui.GetColorU32(1.0, 0.0, 0.0, 0.6))
                 minDelay, changed = ImGui.SliderInt("Min " .. string.sub(category, 1, 1):upper() .. string.sub(category, 2) .. "##", minDelay, 1, 600)
                 if changed then
                     settings.Current.swapDelay[category].min = minDelay
@@ -289,6 +305,10 @@ local function DrawGUI()
                     settings.Current.swapDelay[category].max = maxDelay
                     SaveSettings()
                 end
+                ImGui.PopStyleColor(5)
+                ImGui.Dummy(0, 2)
+                ImGui.Separator()
+                ImGui.Dummy(0, 2)
             end
             if ImGui.Button("Default Values") then
                 settings.Current = settings.Default
@@ -296,16 +316,10 @@ local function DrawGUI()
             end
         end
         ImGui.Dummy(0, 10)
-        ImGui.Text("Vanilla to Custom Swap Ratio:")
-        settings.Current.swapRatio, changed = ImGui.SliderFloat("Swap Ratio", settings.Current.swapRatio, 0.0, 1.0, "%.2f")
-        if changed then
-            SaveSettings()
-        end
-        ui.tooltip("Adjust the ratio of vanilla vehicles swaps to custom vehicle swaps.\n0.0 will swap only vanilla and 1.0 will swap only custom vehicles.")
-        ImGui.Dummy(0, 10)
     end
     ImGui.End()
 end
+
 
 
 registerForEvent("onDraw", function()
