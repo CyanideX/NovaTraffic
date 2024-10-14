@@ -250,14 +250,9 @@ local function DrawGUI()
     if not cetOpen then
         return
     end
-
-    -- Dynamically calculate the height based on content
-    local windowWidth = 430  -- Example width, adjust as needed
-    local windowHeight = 100 + (sliderToggle and (#categories * 87) or 0) + 190  -- Adjust height calculation as needed
-
-    -- Set the window size constraints
+    local windowWidth = 430
+    local windowHeight = 100 + (sliderToggle and (#categories * 87) or 0) + 190
     ImGui.SetNextWindowSize(windowWidth, windowHeight, ImGuiCond.Always)
-
     if ImGui.Begin("Nova Traffic - v" .. modVersion, true, ImGuiWindowFlags.NoScrollbar) then
         ImGui.Dummy(0, 10)
         ImGui.Text("Debug:")
@@ -284,6 +279,9 @@ local function DrawGUI()
                 minDelay, changed = ImGui.SliderInt("Min " .. string.sub(category, 1, 1):upper() .. string.sub(category, 2) .. "##", minDelay, 1, 600)
                 if changed then
                     settings.Current.swapDelay[category].min = minDelay
+                    if minDelay > settings.Current.swapDelay[category].max then
+                        settings.Current.swapDelay[category].max = minDelay
+                    end
                     SaveSettings()
                 end
                 maxDelay, changed = ImGui.SliderInt("Max " .. string.sub(category, 1, 1):upper() .. string.sub(category, 2) .. "##", maxDelay, minDelay, 600)
@@ -292,9 +290,6 @@ local function DrawGUI()
                     SaveSettings()
                 end
             end
-            
-
-            -- Default values button
             if ImGui.Button("Default Values") then
                 settings.Current = settings.Default
                 SaveSettings()
@@ -309,7 +304,9 @@ local function DrawGUI()
         ui.tooltip("Adjust the ratio of vanilla vehicles swaps to custom vehicle swaps.\n0.0 will swap only vanilla and 1.0 will swap only custom vehicles.")
         ImGui.Dummy(0, 10)
     end
+    ImGui.End()
 end
+
 
 registerForEvent("onDraw", function()
     DrawGUI()
