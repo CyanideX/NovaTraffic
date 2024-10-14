@@ -62,45 +62,63 @@ function debugPrint(message)
     end
 end
 
-local function loadVehicleFiles(folder, category, vehicleTable)
-    local files = dir(folder)
-    local customVehiclesLoaded = false
-    for _, file in ipairs(files) do
-        local extension = file.name:match("^.+(%..+)$")
-        if extension == ".json" then
-            local file2 = io.open(folder .. '/' .. file.name, 'r')
-            if file2 then
-                local content = file2:read('*all')
-                file2:close()
+local function parseVehicleSwapJson(jsonContent)
+    local data = json.decode(jsonContent)
+    local vehiclesToSwap = {}
+    local vehiclesToSwapTo = {}
+    
+    if data then
+        for category, lists in pairs(data) do
+            vehiclesToSwap[category] = lists.swapFrom
+            vehiclesToSwapTo[category] = lists.swapTo
+        end
+    end
+    return vehiclesToSwap, vehiclesToSwapTo
+end
 
-                if content == "" then
-                    debugPrint("Warning: File " .. file.name .. " is empty. Swapping may not work correctly.")
-                elseif not is_valid_json(content) then
-                    debugPrint('Failed to load mod vehicles.')
-                else
-                    local vehicles = parseJsonArray(content)
-                    if #vehicles == 0 then
-                        debugPrint("Warning: No valid entries in " .. file.name .. ". Skipping this file.")
-                    else
-                        for _, vehicle in ipairs(vehicles) do
-                            if TweakDB:GetFlat(vehicle .. ".entityTemplatePath") then
-                                vehicleTable[category][#vehicleTable[category] + 1] = vehicle
-                                customVehiclesLoaded = true
-                            end
+local function loadVehicleFile(filePath, vehicleTable, vehicleTableTo)
+    local file = io.open(filePath, 'r')
+    local customVehiclesLoaded = false
+    if file then
+        local content = file:read('*all')
+        file:close()
+        if content == "" then
+            debugPrint("Warning: File " .. filePath .. " is empty. Swapping may not work correctly.")
+        elseif not is_valid_json(content) then
+            debugPrint('Failed to load mod vehicles.')
+        else
+            local vehicles, vehiclesTo = parseVehicleSwapJson(content)
+            if vehicles and vehiclesTo then
+                for category, vList in pairs(vehicles) do
+                    for _, vehicle in ipairs(vList) do
+                        if TweakDB:GetFlat(vehicle.name .. ".entityTemplatePath") then
+                            vehicleTable[category] = vehicleTable[category] or {}
+                            table.insert(vehicleTable[category], vehicle.name)
+                            customVehiclesLoaded = true
                         end
-                        shuffleArray(vehicleTable[category])
                     end
+                    shuffleArray(vehicleTable[category])
+                end
+                for category, vList in pairs(vehiclesTo) do
+                    for _, vehicle in ipairs(vList) do
+                        if TweakDB:GetFlat(vehicle.name .. ".entityTemplatePath") then
+                            vehicleTableTo[category] = vehicleTableTo[category] or {}
+                            table.insert(vehicleTableTo[category], vehicle.name)
+                            customVehiclesLoaded = true
+                        end
+                    end
+                    shuffleArray(vehicleTableTo[category])
                 end
             else
-                debugPrint("Error: File not found - " .. file.name .. ". Creating an empty one.")
-                file2 = io.open(folder .. '/' .. file.name, 'w')
-                local sampleLayout = '[\n  \n]'
-                file2:write(sampleLayout)
-                file2:close()
+                debugPrint("Warning: No valid vehicle swap lists in " .. filePath .. ". Skipping this file.")
             end
-        else
-            debugPrint('Skipping file without json extension in ' .. folder)
         end
+    else
+        debugPrint("Error: File not found - " .. filePath .. ". Creating an empty one.")
+        file = io.open(filePath, 'w')
+        local sampleLayout = '{\n  "common": { "swapFrom": [], "swapTo": [] },\n  "rare": { "swapFrom": [], "swapTo": [] },\n  "exotic": { "swapFrom": [], "swapTo": [] },\n  "badlands": { "swapFrom": [], "swapTo": [] },\n  "special": { "swapFrom": [], "swapTo": [] }\n}'
+        file:write(sampleLayout)
+        file:close()
     end
     if not customVehiclesLoaded then
         debugPrint("No custom folder vehicles loaded!")
@@ -109,24 +127,7 @@ end
 
 registerForEvent("onInit", function()
     LoadSettings()
-    
-    for _, category in ipairs(categories) do
-        if category == "exotic" then
-            loadVehicleFiles("custom", category, vehiclesToSwapTo)
-        end
-
-        -- Load modded vehicles
-        loadVehicleFiles('swapToModded', category, vehiclesToSwapTo)
-
-        -- Load user vehicles
-        loadVehicleFiles('userVehicles', category, vehiclesToSwap)
-
-        -- Load vanilla vehicles
-        loadVehicleFiles('swapToVanilla', category, vehiclesToSwapTo)
-
-        -- Load vehicles to swap
-        loadVehicleFiles('swapFromVanilla', category, vehiclesToSwap)
-    end
+    loadVehicleFile('vehicleSwaps.json', vehiclesToSwap, vehiclesToSwapTo)
 end)
 
 local function formatVehicleName(vehicle)
