@@ -11,6 +11,7 @@ local initialDelay = { common = 1.0, rare = 2.0, exotic = 3.0, badlands = 4.0, s
 local isInitialReplacementDone = { common = false, rare = false, exotic = false, badlands = false, special = false }
 local vehiclesToSwap = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {} }
 local vehiclesToSwapTo = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {} }
+local customVehiclesToSwapTo = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {} }
 
 local function shuffleArray(array)
     for i = #array, 2, -1 do
@@ -24,8 +25,8 @@ function is_valid_json(str)
     return success and type(result) == 'table'
 end
 
-local settings =
-{
+local settings = {
+
     Current = {
         debugOutput = true,
         swapDelay = {
@@ -34,7 +35,8 @@ local settings =
             exotic = 120,
             badlands = 120,
             special = 180
-        }
+        },
+        swapRatio = 0.5
     },
     Default = {
         debugOutput = true,
@@ -44,7 +46,8 @@ local settings =
             exotic = 120,
             badlands = 120,
             special = 180
-        }
+        },
+        swapRatio = 0.5
     }
 }
 
@@ -58,7 +61,7 @@ local function parseVehicleSwapJson(jsonContent)
     local data = json.decode(jsonContent)
     local vehiclesToSwap = {}
     local vehiclesToSwapTo = {}
-    
+
     if data then
         for category, lists in pairs(data) do
             vehiclesToSwap[category] = lists.swapFrom
@@ -117,7 +120,7 @@ local function loadVehicleFile(filePath, vehicleTable, vehicleTableTo)
     end
 end
 
-local function loadCustomVehicleFiles(folder, vehicleTable, vehicleTableTo)
+local function loadCustomVehicleFiles(folder, vehicleTableTo)
     local files = dir(folder)
     for _, file in ipairs(files) do
         if file.name:match("%.json$") then
@@ -127,7 +130,7 @@ local function loadCustomVehicleFiles(folder, vehicleTable, vehicleTableTo)
                 local content = file:read('*all')
                 file:close()
                 if content ~= "" and is_valid_json(content) then
-                    local vehicles, vehiclesTo = parseVehicleSwapJson(content)
+                    local _, vehiclesTo = parseVehicleSwapJson(content)
                     if vehiclesTo then
                         for category, vList in pairs(vehiclesTo) do
                             for _, vehicle in ipairs(vList) do
@@ -154,9 +157,8 @@ end
 registerForEvent("onInit", function()
     LoadSettings()
     loadVehicleFile('vehicleSwaps.json', vehiclesToSwap, vehiclesToSwapTo)
-    loadCustomVehicleFiles('custom', vehiclesToSwap, vehiclesToSwapTo)
+    loadCustomVehicleFiles('custom', customVehiclesToSwapTo)
 end)
-
 
 local function formatVehicleName(vehicle)
     return vehicle:gsub("Vehicle%.v_[^_]+_", ""):gsub("_", " "):gsub("(%a)([%w_']*)", function(first, rest) return first:upper() .. rest:lower() end)
@@ -176,33 +178,38 @@ local function replace(initialVehicle, newVehicle)
 end
 
 local function vehicleReplacement(category)
-    -- Shuffle the current vehicles to swap and to swap to
     currentVehicleToSwap[category] = math.random(#vehiclesToSwap[category])
-    currentVehicleToSwapTo[category] = math.random(#vehiclesToSwapTo[category])
-
     local vehicleToSwap = vehiclesToSwap[category][currentVehicleToSwap[category]]
-    local vehicle = vehiclesToSwapTo[category][currentVehicleToSwapTo[category]]
+    local vehicle
 
-    -- Check if the vehicle to swap is the same as the vehicle to swap to
-    while vehicleToSwap == vehicle do
-        -- If they are the same, get the next vehicle in the list to swap to
-        currentVehicleToSwapTo[category] = (currentVehicleToSwapTo[category] % #vehiclesToSwapTo[category]) + 1
-        vehicle = vehiclesToSwapTo[category][currentVehicleToSwapTo[category]]
+    if settings.Current.swapRatio == 1 then
+        currentVehicleToSwapTo[category] = math.random(#customVehiclesToSwapTo[category])
+        vehicle = customVehiclesToSwapTo[category][currentVehicleToSwapTo[category]]
+    else
+        local useCustom = math.random() < settings.Current.swapRatio
+        if useCustom then
+            currentVehicleToSwapTo[category] = math.random(#customVehiclesToSwapTo[category])
+            vehicle = customVehiclesToSwapTo[category][currentVehicleToSwapTo[category]]
+        else
+            currentVehicleToSwapTo[category] = math.random(#vehiclesToSwapTo[category])
+            vehicle = vehiclesToSwapTo[category][currentVehicleToSwapTo[category]]
+        end
     end
 
     replace(vehicleToSwap, vehicle)
     debugPrint("Swapped " .. formatVehicleName(vehicleToSwap) .. " (" .. category:upper() .. ") with " .. formatVehicleName(vehicle) .. " (" .. category:upper() .. ")")
 
     currentVehicleToSwap[category] = (currentVehicleToSwap[category] % #vehiclesToSwap[category]) + 1
-    currentVehicleToSwapTo[category] = (currentVehicleToSwapTo[category] % #vehiclesToSwapTo[category]) + 1
+    currentVehicleToSwapTo[category] = (currentVehicleToSwapTo[category] % #customVehiclesToSwapTo[category]) + 1
+
     if currentVehicleToSwap[category] == 1 then
         shuffleArray(vehiclesToSwap[category])
     end
     if currentVehicleToSwapTo[category] == 1 then
-        shuffleArray(vehiclesToSwapTo[category])
+        shuffleArray(customVehiclesToSwapTo[category])
     end
 
-    local delay = settings.Current.swapDelay[category] -- Use the user settings for swap delay
+    local delay = settings.Current.swapDelay[category]
     Cron.After(delay, function() vehicleReplacement(category) end)
 end
 
@@ -217,17 +224,14 @@ registerForEvent("onUpdate", function(delta)
 end)
 
 local function DrawGUI()
-    -- Check if the CET window is open
     if not cetOpen then
         return
     end
-
     if ImGui.Begin("Nova Traffic - v" .. modVersion, true, ImGuiWindowFlags.NoScrollbar) then
         ImGui.Dummy(0, 10)
         ImGui.Text("Debug:")
         ImGui.Separator()
         ImGui.Dummy(0, 10)
-
         local changed
         settings.Current.debugOutput, changed = ImGui.Checkbox("Debug Console Output", settings.Current.debugOutput)
         if changed then
@@ -235,7 +239,6 @@ local function DrawGUI()
             SaveSettings()
         end
         ImGui.Dummy(0, 10)
-
         ImGui.Text("Swap delay timers (in seconds):")
         for _, category in ipairs(categories) do
             local swapDelay = settings.Current.swapDelay[category]
@@ -243,11 +246,15 @@ local function DrawGUI()
             if changed then
                 settings.Current.swapDelay[category] = swapDelay
                 SaveSettings()
-                -- Update the swap delay immediately
                 isInitialReplacementDone[category] = false
             end
         end
-        
+        ImGui.Dummy(0, 10)
+        ImGui.Text("Vanilla to Custom Swap Ratio:")
+        settings.Current.swapRatio, changed = ImGui.SliderFloat("Swap Ratio", settings.Current.swapRatio, 0.0, 1.0, "%.2f")
+        if changed then
+            SaveSettings()
+        end
         ImGui.Dummy(0, 10)
     end
 end
@@ -267,9 +274,9 @@ end)
 function SaveSettings()
     local saveData = {
         debugOutput = settings.Current.debugOutput,
-        swapDelay = settings.Current.swapDelay
+        swapDelay = settings.Current.swapDelay,
+        swapRatio = settings.Current.swapRatio -- Ensure swapRatio is saved
     }
-
     local file = io.open("settings.json", "w")
     if file then
         file:write(json.encode(saveData))
@@ -283,26 +290,26 @@ end
 function LoadSettings()
     local file = io.open("settings.json", "r")
     local saveNeeded = false
-
     if file then
         local content = file:read("*all")
         file:close()
         local loadedSettings = json.decode(content)
-        
         -- Check for missing parameters and set defaults if necessary
         if loadedSettings.debugOutput == nil then
             loadedSettings.debugOutput = settings.Default.debugOutput
             saveNeeded = true
         end
-
         if loadedSettings.swapDelay == nil then
             loadedSettings.swapDelay = settings.Default.swapDelay
             saveNeeded = true
         end
-
+        if loadedSettings.swapRatio == nil then
+            loadedSettings.swapRatio = settings.Default.swapRatio
+            saveNeeded = true
+        end
         settings.Current.debugOutput = loadedSettings.debugOutput
         settings.Current.swapDelay = loadedSettings.swapDelay
-
+        settings.Current.swapRatio = loadedSettings.swapRatio
         if saveNeeded then
             SaveSettings()
             print(IconGlyphs.CarHatchback .. " Nova Traffic: Settings loaded and updated successfully")
@@ -315,4 +322,5 @@ function LoadSettings()
         SaveSettings()
     end
 end
+
 return NovaTraffic
