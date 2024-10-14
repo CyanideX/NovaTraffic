@@ -13,6 +13,8 @@ local vehiclesToSwap = { common = {}, rare = {}, exotic = {}, badlands = {}, spe
 local vehiclesToSwapTo = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {} }
 local customVehiclesToSwapTo = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {} }
 
+local sliderToggle = false
+
 local ui = {
 	tooltip = function(text, alwaysShow)
 		if ImGui.IsItemHovered() and text ~= "" then
@@ -248,6 +250,14 @@ local function DrawGUI()
     if not cetOpen then
         return
     end
+
+    -- Dynamically calculate the height based on content
+    local windowWidth = 430  -- Example width, adjust as needed
+    local windowHeight = 100 + (sliderToggle and (#categories * 87) or 0) + 190  -- Adjust height calculation as needed
+
+    -- Set the window size constraints
+    ImGui.SetNextWindowSize(windowWidth, windowHeight, ImGuiCond.Always)
+
     if ImGui.Begin("Nova Traffic - v" .. modVersion, true, ImGuiWindowFlags.NoScrollbar) then
         ImGui.Dummy(0, 10)
         ImGui.Text("Debug:")
@@ -260,18 +270,33 @@ local function DrawGUI()
             SaveSettings()
         end
         ImGui.Dummy(0, 10)
-        ImGui.Text("Swap delay timers (min to max in seconds):")
-        for _, category in ipairs(categories) do
-            local minDelay = settings.Current.swapDelay[category].min
-            local maxDelay = settings.Current.swapDelay[category].max
-            minDelay, changed = ImGui.SliderInt("Min " .. string.sub(category, 1, 1):upper() .. string.sub(category, 2) .. "##", minDelay, 1, 600)
-            if changed then
-                settings.Current.swapDelay[category].min = minDelay
-                SaveSettings()
+        sliderToggle, changed = ImGui.Checkbox("Adjust Swap Timers", sliderToggle)
+        if changed then
+            print(IconGlyphs.CarHatchback .. " Nova Traffic: Toggled debug output to " .. tostring(sliderToggle))
+            SaveSettings()
+        end
+        ui.tooltip("Changing slider values is NOT recommended.\n\nYou may need to reload CET mods for changes to take effect.")
+        if sliderToggle then
+            ImGui.Text("Swap delay timers (min to max in seconds):")
+            for _, category in ipairs(categories) do
+                local minDelay = settings.Current.swapDelay[category].min
+                local maxDelay = settings.Current.swapDelay[category].max
+                minDelay, changed = ImGui.SliderInt("Min " .. string.sub(category, 1, 1):upper() .. string.sub(category, 2) .. "##", minDelay, 1, 600)
+                if changed then
+                    settings.Current.swapDelay[category].min = minDelay
+                    SaveSettings()
+                end
+                maxDelay, changed = ImGui.SliderInt("Max " .. string.sub(category, 1, 1):upper() .. string.sub(category, 2) .. "##", maxDelay, minDelay, 600)
+                if changed then
+                    settings.Current.swapDelay[category].max = maxDelay
+                    SaveSettings()
+                end
             end
-            maxDelay, changed = ImGui.SliderInt("Max " .. string.sub(category, 1, 1):upper() .. string.sub(category, 2) .. "##", maxDelay, minDelay, 600)
-            if changed then
-                settings.Current.swapDelay[category].max = maxDelay
+            
+
+            -- Default values button
+            if ImGui.Button("Default Values") then
+                settings.Current = settings.Default
                 SaveSettings()
             end
         end
@@ -308,7 +333,7 @@ function SaveSettings()
     if file then
         file:write(json.encode(saveData))
         file:close()
-        print(IconGlyphs.CarHatchback .. " Nova Traffic: Settings saved successfully")
+        --print(IconGlyphs.CarHatchback .. " Nova Traffic: Settings saved successfully")
     else
         print(IconGlyphs.CarHatchback .. " Nova Traffic: ERROR - Unable to open file for writing")
     end
