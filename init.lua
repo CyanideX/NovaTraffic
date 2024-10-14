@@ -26,29 +26,29 @@ function is_valid_json(str)
 end
 
 local settings = {
-
-    Current = {
-        debugOutput = true,
-        swapDelay = {
-            common = 30,
-            rare = 90,
-            exotic = 120,
-            badlands = 120,
-            special = 180
+        Current = {
+            debugOutput = true,
+            swapDelay = {
+                common = { min = 500, max = 600 },
+                rare = { min = 150, max = 300 },
+                exotic = { min = 400, max = 600 },
+                badlands = { min = 150, max = 600 },
+                special = { min = 150, max = 600 }
+            },
+            swapRatio = 0.5
         },
-        swapRatio = 0.5
-    },
-    Default = {
-        debugOutput = true,
-        swapDelay = {
-            common = 30,
-            rare = 90,
-            exotic = 120,
-            badlands = 120,
-            special = 180
-        },
-        swapRatio = 0.5
-    }
+        Default = {
+            debugOutput = true,
+            swapDelay = {
+                common = { min = 500, max = 600 },
+                rare = { min = 150, max = 300 },
+                exotic = { min = 400, max = 600 },
+                badlands = { min = 150, max = 600 },
+                special = { min = 150, max = 600 }
+            },
+            swapRatio = 0.5
+        }
+    
 }
 
 function debugPrint(message)
@@ -177,6 +177,12 @@ local function replace(initialVehicle, newVehicle)
     TweakDB:SetFlatNoUpdate('Vehicle.v_standard2_chevalier_thrax.entityTemplatePath', 'base//vehicles//custom//v_custom_chevalier_thrax_combat_cab.ent')
 end
 
+local function getRandomDelay(category)
+    local minDelay = settings.Current.swapDelay[category].min
+    local maxDelay = settings.Current.swapDelay[category].max
+    return math.random(minDelay, maxDelay)
+end
+
 local function vehicleReplacement(category)
     currentVehicleToSwap[category] = math.random(#vehiclesToSwap[category])
     local vehicleToSwap = vehiclesToSwap[category][currentVehicleToSwap[category]]
@@ -185,6 +191,9 @@ local function vehicleReplacement(category)
     if settings.Current.swapRatio == 1 then
         currentVehicleToSwapTo[category] = math.random(#customVehiclesToSwapTo[category])
         vehicle = customVehiclesToSwapTo[category][currentVehicleToSwapTo[category]]
+    elseif settings.Current.swapRatio == 0 then
+        currentVehicleToSwapTo[category] = math.random(#vehiclesToSwapTo[category])
+        vehicle = vehiclesToSwapTo[category][currentVehicleToSwapTo[category]]
     else
         local useCustom = math.random() < settings.Current.swapRatio
         if useCustom then
@@ -209,7 +218,7 @@ local function vehicleReplacement(category)
         shuffleArray(customVehiclesToSwapTo[category])
     end
 
-    local delay = settings.Current.swapDelay[category]
+    local delay = getRandomDelay(category)
     Cron.After(delay, function() vehicleReplacement(category) end)
 end
 
@@ -239,14 +248,19 @@ local function DrawGUI()
             SaveSettings()
         end
         ImGui.Dummy(0, 10)
-        ImGui.Text("Swap delay timers (in seconds):")
+        ImGui.Text("Swap delay timers (min to max in seconds):")
         for _, category in ipairs(categories) do
-            local swapDelay = settings.Current.swapDelay[category]
-            swapDelay, changed = ImGui.SliderInt(string.sub(category, 1, 1):upper() .. string.sub(category, 2) .. "##", swapDelay, 1, 600)
+            local minDelay = settings.Current.swapDelay[category].min
+            local maxDelay = settings.Current.swapDelay[category].max
+            minDelay, changed = ImGui.SliderInt("Min " .. string.sub(category, 1, 1):upper() .. string.sub(category, 2) .. "##", minDelay, 1, 600)
             if changed then
-                settings.Current.swapDelay[category] = swapDelay
+                settings.Current.swapDelay[category].min = minDelay
                 SaveSettings()
-                isInitialReplacementDone[category] = false
+            end
+            maxDelay, changed = ImGui.SliderInt("Max " .. string.sub(category, 1, 1):upper() .. string.sub(category, 2) .. "##", maxDelay, minDelay, 600)
+            if changed then
+                settings.Current.swapDelay[category].max = maxDelay
+                SaveSettings()
             end
         end
         ImGui.Dummy(0, 10)
