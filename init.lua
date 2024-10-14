@@ -3,7 +3,7 @@ math.randomseed(os.time())
 local params = require('params')
 local Cron = require('Cron')
 local NovaTraffic = {}
-local modVersion = "1.0.0"
+local modVersion = "1.6.0"
 local categories = { "common", "rare", "exotic", "badlands", "special" }
 local currentVehicleToSwap = { common = 1, rare = 1, exotic = 1, badlands = 1, special = 1 }
 local currentVehicleToSwapTo = { common = 1, rare = 1, exotic = 1, badlands = 1, special = 1 }
