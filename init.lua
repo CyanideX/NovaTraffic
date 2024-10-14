@@ -302,7 +302,7 @@ function SaveSettings()
     local saveData = {
         debugOutput = settings.Current.debugOutput,
         swapDelay = settings.Current.swapDelay,
-        swapRatio = settings.Current.swapRatio -- Ensure swapRatio is saved
+        swapRatio = settings.Current.swapRatio
     }
     local file = io.open("settings.json", "w")
     if file then
@@ -321,7 +321,6 @@ function LoadSettings()
         local content = file:read("*all")
         file:close()
         local loadedSettings = json.decode(content)
-        -- Check for missing parameters and set defaults if necessary
         if loadedSettings.debugOutput == nil then
             loadedSettings.debugOutput = settings.Default.debugOutput
             saveNeeded = true
