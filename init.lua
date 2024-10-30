@@ -4,14 +4,14 @@ local params = require('params')
 local Cron = require('Cron')
 local NovaTraffic = {}
 local modVersion = "1.6.0"
-local categories = { "common", "rare", "exotic", "badlands", "special" }
-local currentVehicleToSwap = { common = 1, rare = 1, exotic = 1, badlands = 1, special = 1 }
-local currentVehicleToSwapTo = { common = 1, rare = 1, exotic = 1, badlands = 1, special = 1 }
-local initialDelay = { common = 1.0, rare = 2.0, exotic = 3.0, badlands = 4.0, special = 5.0 }
-local isInitialReplacementDone = { common = false, rare = false, exotic = false, badlands = false, special = false }
-local vehiclesToSwap = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {} }
-local vehiclesToSwapTo = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {} }
-local customVehiclesToSwapTo = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {} }
+local categories = { "common", "rare", "exotic", "badlands", "special", "utility" }
+local currentVehicleToSwap = { common = 1, rare = 1, exotic = 1, badlands = 1, special = 1, utility = 1 }
+local currentVehicleToSwapTo = { common = 1, rare = 1, exotic = 1, badlands = 1, special = 1, utility = 1 }
+local initialDelay = { common = 1.0, rare = 2.0, exotic = 3.0, badlands = 4.0, special = 5.0, utility = 6.0 }
+local isInitialReplacementDone = { common = false, rare = false, exotic = false, badlands = false, special = false, utility = false }
+local vehiclesToSwap = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {}, utility = {} }
+local vehiclesToSwapTo = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {}, utility = {} }
+local customVehiclesToSwapTo = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {}, utility = {} }
 
 local sliderToggle = false
 
@@ -38,29 +38,30 @@ function is_valid_json(str)
 end
 
 local settings = {
-        Current = {
-            debugOutput = true,
-            swapDelay = {
-                common = { min = 500, max = 600 },
-                rare = { min = 350, max = 600 },
-                exotic = { min = 400, max = 600 },
-                badlands = { min = 350, max = 600 },
-                special = { min = 350, max = 600 }
-            },
-            swapRatio = 0.5
+    Current = {
+        debugOutput = true,
+        swapDelay = {
+            common = { min = 500, max = 600 },
+            rare = { min = 350, max = 600 },
+            exotic = { min = 400, max = 600 },
+            badlands = { min = 350, max = 600 },
+            special = { min = 350, max = 600 },
+            utility = { min = 400, max = 600 }
         },
-        Default = {
-            debugOutput = true,
-            swapDelay = {
-                common = { min = 500, max = 600 },
-                rare = { min = 350, max = 600 },
-                exotic = { min = 400, max = 600 },
-                badlands = { min = 350, max = 600 },
-                special = { min = 350, max = 600 }
-            },
-            swapRatio = 0.5
-        }
-    
+        swapRatio = 0.5
+    },
+    Default = {
+        debugOutput = true,
+        swapDelay = {
+            common = { min = 500, max = 600 },
+            rare = { min = 350, max = 600 },
+            exotic = { min = 400, max = 600 },
+            badlands = { min = 350, max = 600 },
+            special = { min = 350, max = 600 },
+            utility = { min = 400, max = 600 }
+        },
+        swapRatio = 0.5
+    }
 }
 
 function debugPrint(message)
@@ -123,7 +124,7 @@ local function loadVehicleFile(filePath, vehicleTable, vehicleTableTo)
     else
         debugPrint("Error: File not found - " .. filePath .. ". Creating an empty one.")
         file = io.open(filePath, 'w')
-        local sampleLayout = '{\n  "common": { "swapFrom": [], "swapTo": [] },\n  "rare": { "swapFrom": [], "swapTo": [] },\n  "exotic": { "swapFrom": [], "swapTo": [] },\n  "badlands": { "swapFrom": [], "swapTo": [] },\n  "special": { "swapFrom": [], "swapTo": [] }\n}'
+        local sampleLayout = '{\n  "common": { "swapFrom": [], "swapTo": [] },\n  "rare": { "swapFrom": [], "swapTo": [] },\n  "exotic": { "swapFrom": [], "swapTo": [] },\n  "badlands": { "swapFrom": [], "swapTo": [] },\n  "special": { "swapFrom": [], "swapTo": [] },\n  "utility": { "swapFrom": [], "swapTo": [] }\n}'
         file:write(sampleLayout)
         file:close()
     end
@@ -172,6 +173,12 @@ registerForEvent("onInit", function()
     LoadSettings()
     loadVehicleFile('vehicleSwaps.json', vehiclesToSwap, vehiclesToSwapTo)
     loadCustomVehicleFiles('custom', customVehiclesToSwapTo)
+
+    --[[
+    Observe("PreventionSpawnSystem", "RequestChaseVehicle", function(this, vehicleRecordID, passengersRecordIDs, strategy)
+        print(tostring(vehicleRecordID.value))
+    end)
+    ]]
 end)
 
 local function formatVehicleName(vehicle)
@@ -276,7 +283,7 @@ local function DrawGUI()
         ImGui.Dummy(0, 0)
         sliderToggle, changed = ImGui.Checkbox("Adjust Swap Timers", sliderToggle)
         if changed then
-            print(IconGlyphs.CarHatchback .. " Nova Traffic: Toggled debug output to " .. tostring(sliderToggle))
+            print(IconGlyphs.CarHatchback .. " Nova Traffic: Toggled swap timers to " .. tostring(sliderToggle))
             SaveSettings()
         end
         ui.tooltip("Changing slider values is NOT recommended.\n\nYou may need to reload CET mods for changes to take effect.")
@@ -319,8 +326,6 @@ local function DrawGUI()
     end
     ImGui.End()
 end
-
-
 
 registerForEvent("onDraw", function()
     DrawGUI()
