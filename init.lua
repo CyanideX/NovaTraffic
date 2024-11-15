@@ -48,7 +48,8 @@ local settings = {
             special = { min = 350, max = 600 },
             utility = { min = 400, max = 600 }
         },
-        swapRatio = 0.5
+        swapRatio = 0.5,
+        modActive = true
     },
     Default = {
         debugOutput = true,
@@ -60,7 +61,8 @@ local settings = {
             special = { min = 350, max = 600 },
             utility = { min = 400, max = 600 }
         },
-        swapRatio = 0.5
+        swapRatio = 0.5,
+        modActive = true
     }
 }
 
@@ -244,6 +246,16 @@ local function vehicleReplacement(category)
 end
 
 registerForEvent("onUpdate", function(delta)
+    if not settings.Current.modActive then
+        -- Reset the state when mod is disabled
+        for category, _ in pairs(currentVehicleToSwap) do
+            isInitialReplacementDone[category] = false
+            currentVehicleToSwap[category] = 1
+            currentVehicleToSwapTo[category] = 1
+        end
+        return
+    end
+
     Cron.Update(delta)
     for category, _ in pairs(currentVehicleToSwap) do
         if not isInitialReplacementDone[category] and currentVehicleToSwap[category] == 1 and currentVehicleToSwapTo[category] == 1 then
@@ -262,10 +274,22 @@ local function DrawGUI()
     ImGui.SetNextWindowSize(windowWidth, windowHeight, ImGuiCond.Always)
     if ImGui.Begin("Nova Traffic - v" .. modVersion, true, ImGuiWindowFlags.NoScrollbar) then
         ImGui.Dummy(0, 10)
-        ImGui.Text("Debug:")
-        ImGui.Separator()
-        ImGui.Dummy(0, 4)
-        local changed
+        
+        -- Add the checkbox at the top of the GUI
+        settings.Current.modActive, changed = ImGui.Checkbox("Enable Vehicle Swapping", settings.Current.modActive)
+        if changed then
+            local status = settings.Current.modActive and "Enabled" or "Disabled"
+            print(IconGlyphs.CarHatchback .. " Nova Traffic: " .. status)
+            SaveSettings()
+            if settings.Current.modActive then
+                -- Restart the vehicle replacement process when re-enabled
+                for category, _ in pairs(currentVehicleToSwap) do
+                    Cron.After(initialDelay[category], function() vehicleReplacement(category) end)
+                    isInitialReplacementDone[category] = true
+                end
+            end
+        end
+        ImGui.Dummy(0, 0)
         settings.Current.debugOutput, changed = ImGui.Checkbox("Debug Console Output", settings.Current.debugOutput)
         if changed then
             print(IconGlyphs.CarHatchback .. " Nova Traffic: Toggled debug output to " .. tostring(settings.Current.debugOutput))
@@ -343,13 +367,14 @@ function SaveSettings()
     local saveData = {
         debugOutput = settings.Current.debugOutput,
         swapDelay = settings.Current.swapDelay,
-        swapRatio = settings.Current.swapRatio
+        swapRatio = settings.Current.swapRatio,
+        modActive = settings.Current.modActive
     }
     local file = io.open("settings.json", "w")
     if file then
         file:write(json.encode(saveData))
         file:close()
-        --print(IconGlyphs.CarHatchback .. " Nova Traffic: Settings saved successfully")
+        -- print(IconGlyphs.CarHatchback .. " Nova Traffic: Settings saved successfully")
     else
         print(IconGlyphs.CarHatchback .. " Nova Traffic: ERROR - Unable to open file for writing")
     end
@@ -374,9 +399,14 @@ function LoadSettings()
             loadedSettings.swapRatio = settings.Default.swapRatio
             saveNeeded = true
         end
+        if loadedSettings.modActive == nil then
+            loadedSettings.modActive = settings.Default.modActive
+            saveNeeded = true
+        end
         settings.Current.debugOutput = loadedSettings.debugOutput
         settings.Current.swapDelay = loadedSettings.swapDelay
         settings.Current.swapRatio = loadedSettings.swapRatio
+        settings.Current.modActive = loadedSettings.modActive
         if saveNeeded then
             SaveSettings()
             print(IconGlyphs.CarHatchback .. " Nova Traffic: Settings loaded and updated successfully")
