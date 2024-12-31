@@ -1,3 +1,7 @@
+-- Import required modules
+local ResolutionPresets = require("Modules/ResolutionPresets")
+local WindowUtils = require("Modules/WindowUtils")
+
 math.randomseed(os.time())
 
 local params = require('params')
@@ -14,6 +18,13 @@ local vehiclesToSwapTo = { common = {}, rare = {}, exotic = {}, badlands = {}, s
 local customVehiclesToSwapTo = { common = {}, rare = {}, exotic = {}, badlands = {}, special = {}, utility = {} }
 
 local sliderToggle = false
+
+-- Define window settings
+local windowSettings = {
+    mainWindow = {
+        windowName = "Nova Traffic"
+    },
+}
 
 local ui = {
 	tooltip = function(text, alwaysShow)
@@ -49,7 +60,10 @@ local settings = {
             utility = { min = 400, max = 600 }
         },
         swapRatio = 0.5,
-        modActive = true
+        modActive = true,
+        gridEnabled = true,
+        animationEnabled = true,
+        animationTime = 0.2,
     },
     Default = {
         debugOutput = true,
@@ -62,7 +76,10 @@ local settings = {
             utility = { min = 400, max = 600 }
         },
         swapRatio = 0.5,
-        modActive = true
+        modActive = true,
+        gridEnabled = true,
+        animationEnabled = true,
+        animationTime = 0.2,
     }
 }
 
@@ -269,11 +286,14 @@ local function DrawGUI()
     if not cetOpen then
         return
     end
-    local windowWidth = 430
-    local windowHeight = 100 + (sliderToggle and (#categories * 112) or 0) + 190
-    ImGui.SetNextWindowSize(windowWidth, windowHeight, ImGuiCond.Always)
-    if ImGui.Begin("Nova Traffic - v" .. modVersion, true, ImGuiWindowFlags.NoScrollbar) then
-        ImGui.Dummy(0, 10)
+
+    -- ImGui.SetNextWindowSizeConstraints(width / 100 * 15, height / 100 * 19, width / 100 * 50, height / 100 * 90)
+    
+    if ImGui.Begin("Nova Traffic", true) then
+        -- ImGui.Dummy(0, 4)
+
+        -- Set the font scale for the window
+		ImGui.SetWindowFontScale(customFontScale)
         
         -- Add the checkbox at the top of the GUI
         settings.Current.modActive, changed = ImGui.Checkbox("Enable Vehicle Swapping", settings.Current.modActive)
@@ -298,12 +318,24 @@ local function DrawGUI()
         ImGui.Dummy(0, 10)
         ImGui.Text("Adjustments:")
         ImGui.Separator()
-        ImGui.Dummy(0, 4)
-        settings.Current.swapRatio, changed = ImGui.SliderFloat("Swap Ratio", settings.Current.swapRatio, 0.0, 1.0, "%.2f")
+        ImGui.Dummy(0, 0)
+
+        -- Set the width of the slider to the width of the window minus the padding
+        local windowWidth = ImGui.GetWindowWidth()
+        ImGui.PushItemWidth(windowWidth - timeSliderXPadding - 2)
+
+        -- Set the width and height of the slider to match the game time slider
+        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, 10, sliderHeight)
+        ImGui.SetNextItemWidth(windowWidth - timeSliderXPadding - 2)
+
+        settings.Current.swapRatio, changed = ImGui.SliderFloat("", settings.Current.swapRatio, 0.0, 1.0, "%.2f")
         if changed then
             SaveSettings()
         end
         ui.tooltip("Adjust the ratio of vanilla vehicles swaps to custom vehicle swaps.\n\n0.0 will swap only vanilla and 1.0 will swap only custom vehicles.")
+        
+        ImGui.PopStyleVar()
+        
         ImGui.Dummy(0, 0)
         sliderToggle, changed = ImGui.Checkbox("Adjust Swap Timers", sliderToggle)
         if changed then
@@ -311,8 +343,9 @@ local function DrawGUI()
             SaveSettings()
         end
         ui.tooltip("Changing slider values is NOT recommended.\n\nYou may need to reload CET mods for changes to take effect.")
-        ImGui.Dummy(0, 10)
+        
         if sliderToggle then
+            ImGui.Dummy(0, 10)
             ImGui.Text("Swap delay timers (min to max in seconds):")
             ImGui.Dummy(0, 4)
             for _, category in ipairs(categories) do
@@ -346,8 +379,13 @@ local function DrawGUI()
                 SaveSettings()
             end
         end
-        ImGui.Dummy(0, 10)
+        --ImGui.Dummy(0, 10)
     end
+
+    ImGui.SetWindowFontScale(1) --return font size back to default
+
+    WindowUtils.UpdateWindow(windowSettings.mainWindow.windowName, settings.Current.gridEnabled, settings.Current.animationEnabled, settings.Current.animationTime)
+    
     ImGui.End()
 end
 
@@ -357,6 +395,9 @@ end)
 
 registerForEvent("onOverlayOpen", function()
     cetOpen = true
+
+    width, height = GetDisplayResolution()
+	ResolutionPresets.Set(width, height)
 end)
 
 registerForEvent("onOverlayClose", function()
