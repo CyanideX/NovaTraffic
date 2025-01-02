@@ -287,6 +287,8 @@ local function DrawGUI()
         return
     end
 
+    ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, buttonRadius)
+
     -- ImGui.SetNextWindowSizeConstraints(width / 100 * 15, height / 100 * 19, width / 100 * 50, height / 100 * 90)
     
     if ImGui.Begin("Nova Traffic", true) then
@@ -380,6 +382,8 @@ local function DrawGUI()
             end
         end
         --ImGui.Dummy(0, 10)
+        
+        ImGui.PopStyleVar()
     end
 
     ImGui.SetWindowFontScale(1) --return font size back to default
@@ -460,5 +464,6 @@ function LoadSettings()
         SaveSettings()
     end
 end
+
 
 return NovaTraffic
