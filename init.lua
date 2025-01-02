@@ -288,7 +288,10 @@ local function DrawGUI()
     end
 
     ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, buttonRadius)
-
+    ImGui.PushStyleVar(ImGuiStyleVar.ScrollbarSize, 2)
+    ImGui.PushStyleColor(ImGuiCol.ScrollbarBg, ImGui.GetColorU32(0, 0, 0, 0))
+    ImGui.PushStyleColor(ImGuiCol.ScrollbarGrab, ImGui.GetColorU32(0.8, 0.8, 1, 0.5))
+    
     -- ImGui.SetNextWindowSizeConstraints(width / 100 * 15, height / 100 * 19, width / 100 * 50, height / 100 * 90)
     
     if ImGui.Begin("Nova Traffic", true) then
@@ -337,19 +340,72 @@ local function DrawGUI()
         ui.tooltip("Adjust the ratio of vanilla vehicles swaps to custom vehicle swaps.\n\n0.0 will swap only vanilla and 1.0 will swap only custom vehicles.")
         
         ImGui.PopStyleVar()
+
+        settings.Current.gridEnabled, changed = ImGui.Checkbox("Grid Snap", settings.Current.gridEnabled)
+        if changed then
+            print(IconGlyphs.CarHatchback .. " Nova Traffic: Toggled grid to " .. tostring(settings.Current.gridEnabled))
+            if not settings.Current.gridEnabled then
+                settings.Current.animationEnabled = false -- Disable animation if grid is disabled
+            end
+            SaveSettings()
+        end
+        ui.tooltip("Toggle windows snapping to grid.")
+
+        ImGui.SameLine(windowWidth / 2)
+        if not settings.Current.gridEnabled then
+            ImGui.BeginDisabled()
+        end
+        settings.Current.animationEnabled, changed = ImGui.Checkbox("Animate Snap", settings.Current.animationEnabled)
+        if changed then
+            print(IconGlyphs.CarHatchback .. " Nova Traffic: Toggled animations to " .. tostring(settings.Current.animationEnabled))
+            SaveSettings()
+        end
+        ui.tooltip("Toggle animation of windows when snapping to grid from released position.")
+        if not settings.Current.gridEnabled then
+            ImGui.EndDisabled()
+        end
+
+        if settings.Current.gridEnabled and settings.Current.animationEnabled then
+            ImGui.Dummy(0, dummySpacingYValue)
+            ImGui.PushStyleColor(ImGuiCol.Text, ImGui.GetColorU32(1, 1, 1, 0.7))
+            ImGui.Text("Animation Speed:")
+            ImGui.PopStyleColor()
+
+            -- Set the width of the slider to the width of the window minus the padding
+            local windowWidth = ImGui.GetWindowWidth()
+            ImGui.PushItemWidth(windowWidth - timeSliderXPadding - 2)
+            ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, 10, 10)
+            settings.Current.animationTime, changed = ImGui.SliderFloat("##animationSpeed",
+                settings.Current.animationTime, 0.1, 1.0, "%.2f")
+            if changed then
+                print(IconGlyphs.CarHatchback .. " Nova Traffic: Changed animation speed to " .. string.format("%.2f", settings.Current.animationTime))
+            end
+            ImGui.PopStyleVar()
+            ui.tooltip("Set grid snapping animation in seconds.")
+        end
         
         ImGui.Dummy(0, 0)
+        ImGui.PushStyleColor(ImGuiCol.CheckMark, ImGui.GetColorU32(1, 0.2, 0.2, 1.0))
+        ImGui.PushStyleColor(ImGuiCol.FrameBg, ImGui.GetColorU32(1, 0.0, 0.0, 0.2))
+        ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, ImGui.GetColorU32(1, 0.2, 0.2, 0.5))
+        ImGui.PushStyleColor(ImGuiCol.FrameBgActive, ImGui.GetColorU32(1.0, 0.0, 0.0, 0.6))
         sliderToggle, changed = ImGui.Checkbox("Adjust Swap Timers", sliderToggle)
         if changed then
             print(IconGlyphs.CarHatchback .. " Nova Traffic: Toggled swap timers to " .. tostring(sliderToggle))
             SaveSettings()
         end
+        ImGui.PopStyleColor(4)
         ui.tooltip("Changing slider values is NOT recommended.\n\nYou may need to reload CET mods for changes to take effect.")
         
         if sliderToggle then
             ImGui.Dummy(0, 10)
             ImGui.Text("Swap delay timers (min to max in seconds):")
             ImGui.Dummy(0, 4)
+
+            -- Set the width of the slider to the width of the window minus the padding
+            local windowWidth = ImGui.GetWindowWidth()
+            ImGui.PushItemWidth(windowWidth - buttonWidth - 6)
+
             for _, category in ipairs(categories) do
                 local minDelay = settings.Current.swapDelay[category].min
                 local maxDelay = settings.Current.swapDelay[category].max
@@ -382,9 +438,10 @@ local function DrawGUI()
             end
         end
         --ImGui.Dummy(0, 10)
-        
-        ImGui.PopStyleVar()
     end
+
+    ImGui.PopStyleVar(2)
+    ImGui.PopStyleColor(2)
 
     ImGui.SetWindowFontScale(1) --return font size back to default
 
