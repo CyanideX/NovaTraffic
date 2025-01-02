@@ -1,6 +1,7 @@
 -- Import required modules
 local ResolutionPresets = require("Modules/ResolutionPresets")
 local WindowUtils = require("Modules/WindowUtils")
+local GameUI = require("Modules/GameUI")
 
 math.randomseed(os.time())
 
@@ -192,12 +193,6 @@ registerForEvent("onInit", function()
     LoadSettings()
     loadVehicleFile('vehicleSwaps.json', vehiclesToSwap, vehiclesToSwapTo)
     loadCustomVehicleFiles('custom', customVehiclesToSwapTo)
-
-    --[[
-    Observe("PreventionSpawnSystem", "RequestChaseVehicle", function(this, vehicleRecordID, passengersRecordIDs, strategy)
-        print(tostring(vehicleRecordID.value))
-    end)
-    ]]
 end)
 
 local function formatVehicleName(vehicle)
@@ -273,6 +268,10 @@ registerForEvent("onUpdate", function(delta)
         return
     end
 
+    if Game.GetSystemRequestsHandler():IsPreGame() or Game.GetSystemRequestsHandler():IsGamePaused() then
+        return
+    end
+
     Cron.Update(delta)
     for category, _ in pairs(currentVehicleToSwap) do
         if not isInitialReplacementDone[category] and currentVehicleToSwap[category] == 1 and currentVehicleToSwapTo[category] == 1 then
@@ -345,6 +344,7 @@ local function DrawGUI()
         ImGui.PushStyleColor(ImGuiCol.FrameBg, ImGui.GetColorU32(1, 0.0, 0.0, 0.2))
         ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, ImGui.GetColorU32(1, 0.2, 0.2, 0.5))
         ImGui.PushStyleColor(ImGuiCol.FrameBgActive, ImGui.GetColorU32(1.0, 0.0, 0.0, 0.6))
+
         sliderToggle, changed = ImGui.Checkbox("Adjust Swap Timers", sliderToggle)
         if changed then
             print(IconGlyphs.CarHatchback .. " Nova Traffic: Toggled swap timers to " .. tostring(sliderToggle))
@@ -403,7 +403,7 @@ local function DrawGUI()
         if changed then
             print(IconGlyphs.CarHatchback .. " Nova Traffic: Toggled grid to " .. tostring(settings.Current.gridEnabled))
             if not settings.Current.gridEnabled then
-                settings.Current.animationEnabled = false -- Disable animation if grid is disabled
+            settings.Current.animationEnabled = false -- Disable animation if grid is disabled
             end
             SaveSettings()
         end
@@ -423,23 +423,27 @@ local function DrawGUI()
             ImGui.EndDisabled()
         end
 
-        if settings.Current.gridEnabled and settings.Current.animationEnabled then
-            -- ImGui.Dummy(0, dummySpacingYValue)
-            ImGui.PushStyleColor(ImGuiCol.Text, ImGui.GetColorU32(1, 1, 1, 0.7))
-            ImGui.Text("Animation Speed:")
-            ImGui.PopStyleColor()
+        if not settings.Current.gridEnabled or not settings.Current.animationEnabled then
+            ImGui.BeginDisabled()
+        end
+        ImGui.PushStyleColor(ImGuiCol.Text, ImGui.GetColorU32(1, 1, 1, 0.7))
+        ImGui.Text("Animation Speed:")
+        ImGui.PopStyleColor()
 
-            -- Set the width of the slider to the width of the window minus the padding
-            local windowWidth = ImGui.GetWindowWidth()
-            ImGui.PushItemWidth(windowWidth - timeSliderXPadding - 2)
-            ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, 10, 10)
-            settings.Current.animationTime, changed = ImGui.SliderFloat("##animationSpeed",
-                settings.Current.animationTime, 0.1, 1.0, "%.2f")
-            if changed then
-                print(IconGlyphs.CarHatchback .. " Nova Traffic: Changed animation speed to " .. string.format("%.2f", settings.Current.animationTime))
-            end
-            ImGui.PopStyleVar()
-            ui.tooltip("Set grid snapping animation in seconds.")
+        -- Set the width of the slider to the width of the window minus the padding
+        local windowWidth = ImGui.GetWindowWidth()
+        ImGui.PushItemWidth(windowWidth - timeSliderXPadding - 2)
+        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, 10, 10)
+        settings.Current.animationTime, changed = ImGui.SliderFloat("##animationSpeed",
+        settings.Current.animationTime, 0.1, 1.0, "%.2f")
+        if changed then
+            print(IconGlyphs.CarHatchback .. " Nova Traffic: Changed animation speed to " .. string.format("%.2f", settings.Current.animationTime))
+            SaveSettings()
+        end
+        ImGui.PopStyleVar()
+        ui.tooltip("Set grid snapping animation in seconds.")
+        if not settings.Current.gridEnabled or not settings.Current.animationEnabled then
+            ImGui.EndDisabled()
         end
     end
 
@@ -473,7 +477,10 @@ function SaveSettings()
         debugOutput = settings.Current.debugOutput,
         swapDelay = settings.Current.swapDelay,
         swapRatio = settings.Current.swapRatio,
-        modActive = settings.Current.modActive
+        modActive = settings.Current.modActive,
+        gridEnabled = settings.Current.gridEnabled,
+        animationEnabled = settings.Current.animationEnabled,
+        animationTime = settings.Current.animationTime
     }
     local file = io.open("settings.json", "w")
     if file then
@@ -508,10 +515,25 @@ function LoadSettings()
             loadedSettings.modActive = settings.Default.modActive
             saveNeeded = true
         end
+        if loadedSettings.gridEnabled == nil then
+            loadedSettings.gridEnabled = settings.Default.gridEnabled
+            saveNeeded = true
+        end
+        if loadedSettings.animationEnabled == nil then
+            loadedSettings.animationEnabled = settings.Default.animationEnabled
+            saveNeeded = true
+        end
+        if loadedSettings.animationTime == nil then
+            loadedSettings.animationTime = settings.Default.animationTime
+            saveNeeded = true
+        end
         settings.Current.debugOutput = loadedSettings.debugOutput
         settings.Current.swapDelay = loadedSettings.swapDelay
         settings.Current.swapRatio = loadedSettings.swapRatio
         settings.Current.modActive = loadedSettings.modActive
+        settings.Current.gridEnabled = loadedSettings.gridEnabled
+        settings.Current.animationEnabled = loadedSettings.animationEnabled
+        settings.Current.animationTime = loadedSettings.animationTime
         if saveNeeded then
             SaveSettings()
             print(IconGlyphs.CarHatchback .. " Nova Traffic: Settings loaded and updated successfully")
