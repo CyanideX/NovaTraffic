@@ -314,16 +314,15 @@ local function DrawGUI()
                 end
             end
         end
-        ImGui.Dummy(0, 0)
+        -- ImGui.Dummy(0, 0)
         settings.Current.debugOutput, changed = ImGui.Checkbox("Debug Console Output", settings.Current.debugOutput)
         if changed then
             print(IconGlyphs.CarHatchback .. " Nova Traffic: Toggled debug output to " .. tostring(settings.Current.debugOutput))
             SaveSettings()
         end
-        ImGui.Dummy(0, 10)
+        ImGui.Dummy(0, dummySpacingYValue)
         ImGui.Text("Adjustments:")
         ImGui.Separator()
-        ImGui.Dummy(0, 0)
 
         -- Set the width of the slider to the width of the window minus the padding
         local windowWidth = ImGui.GetWindowWidth()
@@ -341,50 +340,7 @@ local function DrawGUI()
         
         ImGui.PopStyleVar()
 
-        settings.Current.gridEnabled, changed = ImGui.Checkbox("Grid Snap", settings.Current.gridEnabled)
-        if changed then
-            print(IconGlyphs.CarHatchback .. " Nova Traffic: Toggled grid to " .. tostring(settings.Current.gridEnabled))
-            if not settings.Current.gridEnabled then
-                settings.Current.animationEnabled = false -- Disable animation if grid is disabled
-            end
-            SaveSettings()
-        end
-        ui.tooltip("Toggle windows snapping to grid.")
 
-        ImGui.SameLine(windowWidth / 2)
-        if not settings.Current.gridEnabled then
-            ImGui.BeginDisabled()
-        end
-        settings.Current.animationEnabled, changed = ImGui.Checkbox("Animate Snap", settings.Current.animationEnabled)
-        if changed then
-            print(IconGlyphs.CarHatchback .. " Nova Traffic: Toggled animations to " .. tostring(settings.Current.animationEnabled))
-            SaveSettings()
-        end
-        ui.tooltip("Toggle animation of windows when snapping to grid from released position.")
-        if not settings.Current.gridEnabled then
-            ImGui.EndDisabled()
-        end
-
-        if settings.Current.gridEnabled and settings.Current.animationEnabled then
-            ImGui.Dummy(0, dummySpacingYValue)
-            ImGui.PushStyleColor(ImGuiCol.Text, ImGui.GetColorU32(1, 1, 1, 0.7))
-            ImGui.Text("Animation Speed:")
-            ImGui.PopStyleColor()
-
-            -- Set the width of the slider to the width of the window minus the padding
-            local windowWidth = ImGui.GetWindowWidth()
-            ImGui.PushItemWidth(windowWidth - timeSliderXPadding - 2)
-            ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, 10, 10)
-            settings.Current.animationTime, changed = ImGui.SliderFloat("##animationSpeed",
-                settings.Current.animationTime, 0.1, 1.0, "%.2f")
-            if changed then
-                print(IconGlyphs.CarHatchback .. " Nova Traffic: Changed animation speed to " .. string.format("%.2f", settings.Current.animationTime))
-            end
-            ImGui.PopStyleVar()
-            ui.tooltip("Set grid snapping animation in seconds.")
-        end
-        
-        ImGui.Dummy(0, 0)
         ImGui.PushStyleColor(ImGuiCol.CheckMark, ImGui.GetColorU32(1, 0.2, 0.2, 1.0))
         ImGui.PushStyleColor(ImGuiCol.FrameBg, ImGui.GetColorU32(1, 0.0, 0.0, 0.2))
         ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, ImGui.GetColorU32(1, 0.2, 0.2, 0.5))
@@ -438,6 +394,53 @@ local function DrawGUI()
             end
         end
         --ImGui.Dummy(0, 10)
+
+        ImGui.Dummy(0, 0)
+        ImGui.Text("Settings:")
+        ImGui.Separator()
+
+        settings.Current.gridEnabled, changed = ImGui.Checkbox("Grid Snap", settings.Current.gridEnabled)
+        if changed then
+            print(IconGlyphs.CarHatchback .. " Nova Traffic: Toggled grid to " .. tostring(settings.Current.gridEnabled))
+            if not settings.Current.gridEnabled then
+                settings.Current.animationEnabled = false -- Disable animation if grid is disabled
+            end
+            SaveSettings()
+        end
+        ui.tooltip("Toggle windows snapping to grid.")
+
+        ImGui.SameLine(windowWidth / 2)
+        if not settings.Current.gridEnabled then
+            ImGui.BeginDisabled()
+        end
+        settings.Current.animationEnabled, changed = ImGui.Checkbox("Animate Snap", settings.Current.animationEnabled)
+        if changed then
+            print(IconGlyphs.CarHatchback .. " Nova Traffic: Toggled animations to " .. tostring(settings.Current.animationEnabled))
+            SaveSettings()
+        end
+        ui.tooltip("Toggle animation of windows when snapping to grid from released position.")
+        if not settings.Current.gridEnabled then
+            ImGui.EndDisabled()
+        end
+
+        if settings.Current.gridEnabled and settings.Current.animationEnabled then
+            -- ImGui.Dummy(0, dummySpacingYValue)
+            ImGui.PushStyleColor(ImGuiCol.Text, ImGui.GetColorU32(1, 1, 1, 0.7))
+            ImGui.Text("Animation Speed:")
+            ImGui.PopStyleColor()
+
+            -- Set the width of the slider to the width of the window minus the padding
+            local windowWidth = ImGui.GetWindowWidth()
+            ImGui.PushItemWidth(windowWidth - timeSliderXPadding - 2)
+            ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, 10, 10)
+            settings.Current.animationTime, changed = ImGui.SliderFloat("##animationSpeed",
+                settings.Current.animationTime, 0.1, 1.0, "%.2f")
+            if changed then
+                print(IconGlyphs.CarHatchback .. " Nova Traffic: Changed animation speed to " .. string.format("%.2f", settings.Current.animationTime))
+            end
+            ImGui.PopStyleVar()
+            ui.tooltip("Set grid snapping animation in seconds.")
+        end
     end
 
     ImGui.PopStyleVar(2)
