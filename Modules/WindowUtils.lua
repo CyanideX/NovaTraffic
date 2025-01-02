@@ -2,7 +2,6 @@
 local WindowUtils = {}
 
 -- Hardcoded settings
-local minGridSizeForAnimation = 10
 local gridSize = 60
 
 local animatingWindows = {}
@@ -29,13 +28,6 @@ local function getWindowAnimationState(windowName)
         initializeWindowAnimation(windowName)
     end
     return animatingWindows[windowName]
-end
-
-local function getDraggingState(windowName)
-    if draggingWindows[windowName] == nil then
-        initializeWindowAnimation(windowName)
-    end
-    return draggingWindows[windowName]
 end
 
 function WindowUtils.SnapToGrid(position)
@@ -93,7 +85,6 @@ function WindowUtils.UpdateWindow(windowName, gridEnabled, animationEnabled, ani
         local isFocused = ImGui.IsWindowFocused()
         local isDragging = ImGui.IsMouseDragging(ImGuiMouseButton.Left)
         local isReleased = ImGui.IsMouseReleased(ImGuiMouseButton.Left)
-        local draggingState = getDraggingState(windowName)
 
         if isFocused and isDragging then
             draggingWindows[windowName] = true
