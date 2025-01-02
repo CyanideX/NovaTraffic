@@ -1,7 +1,6 @@
 -- Import required modules
 local ResolutionPresets = require("Modules/ResolutionPresets")
 local WindowUtils = require("Modules/WindowUtils")
-local GameUI = require("Modules/GameUI")
 
 math.randomseed(os.time())
 
