@@ -2,7 +2,7 @@
 local WindowUtils = {}
 
 -- Hardcoded settings
-local gridSize = 60
+local gridSize = 20
 
 local animatingWindows = {}
 local draggingWindows = {}
